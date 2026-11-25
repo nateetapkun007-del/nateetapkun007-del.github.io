@@ -9,7 +9,7 @@
 * { box-sizing: border-box; }
 body { margin:0; padding:12px; color:var(--text); font:14px/1.4 system-ui, sans-serif; }
 body.mode-panel { background:var(--bg); }
-body.mode-bar { background:transparent; padding:0; }
+body.mode-bar { background:transparent; padding:0; height:100vh; overflow:hidden; }
 header { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
 h1 { margin:0; font:600 18px/1.2 Georgia, serif; }
 button, input { font:inherit; color:inherit; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 10px; }
@@ -43,16 +43,19 @@ form input[type="number"] { width:56px; }
 label { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; }
 #showBar { margin-top:10px; font-size:12px; color:var(--muted); }
 
-/* top bar */
-body.mode-bar #bar { display:flex; align-items:center; gap:8px; padding:6px 8px; background:rgba(28,32,48,.94); border-radius:12px; }
-.pill { font:600 14px Georgia, serif; white-space:nowrap; }
-#cards { display:flex; flex:1; gap:6px; overflow-x:auto; justify-content:safe center; }
-.card { position:relative; flex:none; width:84px; overflow:hidden; background:var(--surface); border:2px solid transparent; border-radius:8px; text-align:center; }
+/* left bar (vertical) */
+body.mode-bar #bar { display:flex; flex-direction:column; gap:5px; height:100%; padding:5px 6px; background:rgba(28,32,48,.94); border-radius:10px; }
+#barHead { display:flex; align-items:center; justify-content:space-between; gap:4px; }
+#barHead .x { padding:0 2px; font-size:14px; }
+.pill { font:600 11px Georgia, serif; white-space:nowrap; }
+#cards { display:flex; flex-direction:column; align-items:center; flex:1; gap:5px; min-height:0; overflow-y:auto; scrollbar-width:thin; }
+.card { position:relative; flex:none; width:67px; overflow:hidden; background:var(--surface); border:2px solid transparent; border-radius:6px; text-align:center; }
 .card.active { border-color:var(--accent); box-shadow:0 0 0 2px rgba(124,196,232,.35); }
-.card .portrait { width:100%; height:84px; border-radius:0; }
-.card .letter { font-size:34px; line-height:84px; }
-.card .total { position:absolute; top:4px; left:4px; min-width:26px; padding:1px 6px; background:rgba(16,19,31,.88); border-radius:10px; font:700 14px/1.4 Georgia, serif; }
-.cname { padding:3px 4px; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.card .portrait { width:100%; height:63px; border-radius:0; }
+.card .letter { font-size:27px; line-height:63px; }
+.card .total { position:absolute; top:3px; left:3px; min-width:21px; padding:0 5px; background:rgba(16,19,31,.88); border-radius:8px; font:700 11px/1.5 Georgia, serif; }
+.cname { padding:2px 3px; font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#barNext { padding:3px 6px; font-size:11px; }
 body.player .gm-only { display:none; }
 </style>
 </head>
@@ -77,10 +80,12 @@ body.player .gm-only { display:none; }
 </main>
 
 <div id="bar">
-  <span id="barRound" class="pill"></span>
+  <div id="barHead">
+    <span id="barRound" class="pill"></span>
+    <button id="hideBar" class="x" aria-label="Hide tracker bar">×</button>
+  </div>
   <div id="cards"></div>
   <button id="barNext" class="primary gm-only">Next</button>
-  <button id="hideBar" class="x" aria-label="Hide tracker bar">×</button>
 </div>
 
 <script type="module">
@@ -89,7 +94,9 @@ import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3.1.0/+esm";
 const ID = "com.example.random-initiative";
 const KEY = `${ID}/state`;
 const BAR_ID = `${ID}/bar`;
-const BAR_TOP = 70; // how far the top bar sits below the top of the screen (px)
+const BAR_LEFT = 8;   // distance from the left edge of the screen (px)
+const BAR_TOP = 70;   // distance from the top of the screen (px)
+const BAR_WIDTH = 88; // width of the bar (px)
 // round 0 = combat not started. turn = index into combatants.
 const DEFAULT = { combatants: [], round: 0, turn: 0, rerollEachRound: true };
 
@@ -158,15 +165,15 @@ async function focusToken(tokenId) {
 
 // ---- the bar at the top of the screen ----
 async function openBar() {
-  const vw = await OBR.viewport.getWidth();
+  const vh = await OBR.viewport.getHeight();
   await OBR.popover.open({
     id: BAR_ID,
     url: "/index.html?bar=1",
-    width: Math.min(vw - 200, 600),
-    height: 140,
+    width: BAR_WIDTH,
+    height: Math.max(160, Math.min(vh - BAR_TOP - 20, 400)),
     anchorReference: "POSITION",
-    anchorPosition: { left: vw / 2, top: BAR_TOP },
-    transformOrigin: { horizontal: "CENTER", vertical: "TOP" },
+    anchorPosition: { left: BAR_LEFT, top: BAR_TOP },
+    transformOrigin: { horizontal: "LEFT", vertical: "TOP" },
     hidePaper: true,
     disableClickAway: true,
     marginThreshold: 0,
@@ -235,8 +242,8 @@ function startUI(mode) {
   }
 
   async function fitBar() {
-    const vw = await OBR.viewport.getWidth();
-    OBR.popover.setWidth(BAR_ID, Math.max(260, Math.min(vw - 200, state.combatants.length * 90 + 230)));
+    const vh = await OBR.viewport.getHeight();
+    OBR.popover.setHeight(BAR_ID, Math.max(160, Math.min(vh - BAR_TOP - 20, state.combatants.length * 94 + 76)));
   }
 
   function render() {
