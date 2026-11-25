@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Initiative</title>
 <style>
-:root { color-scheme: dark; --bg:#1c2030; --surface:#262b40; --surface-active:#2f3652; --line:#3a4160; --text:#e6e8f0; --muted:#8d94ad; --accent:#7cc4e8; }
+:root { --bg:#1c2030; --surface:#262b40; --surface-active:#2f3652; --line:#3a4160; --text:#e6e8f0; --muted:#8d94ad; --accent:#7cc4e8; }
 * { box-sizing: border-box; }
-body { margin:0; padding:12px; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, sans-serif; }
+body { margin:0; padding:12px; color:var(--text); font:14px/1.4 system-ui, sans-serif; }
+body.mode-panel { background:var(--bg); }
+body.mode-bar { background:transparent; padding:0; }
 header { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
 h1 { margin:0; font:600 18px/1.2 Georgia, serif; }
 button, input { font:inherit; color:inherit; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 10px; }
@@ -16,44 +18,78 @@ button:hover { border-color:var(--accent); }
 button.primary { background:var(--accent); border-color:var(--accent); color:#10202a; font-weight:600; }
 :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .buttons { display:flex; gap:6px; }
+
+/* portraits (used in the panel list and on the bar cards) */
+.portrait { display:block; width:36px; height:36px; padding:0; border:0; border-radius:6px; overflow:hidden; background:#10131f; }
+.portrait:disabled { cursor:default; }
+.portrait img { display:block; width:100%; height:100%; object-fit:cover; }
+.letter { display:block; font:700 18px/36px Georgia, serif; color:var(--muted); text-align:center; }
+
+/* panel */
+#bar { display:none; }
+body.mode-bar #panel { display:none; }
 ol { list-style:none; margin:0 0 10px; padding:0; display:grid; gap:4px; }
-li { display:grid; grid-template-columns:40px 1fr auto 56px 28px; align-items:center; gap:8px; padding:6px 8px; background:var(--surface); border-left:4px solid transparent; border-radius:6px; }
+li { display:grid; grid-template-columns:36px 36px 1fr 56px 28px; align-items:center; gap:8px; padding:6px 8px; background:var(--surface); border-left:4px solid transparent; border-radius:6px; }
 li.active { border-left-color:var(--accent); background:var(--surface-active); }
 li.empty { display:block; padding:16px; color:var(--muted); text-align:center; }
 .total { font:700 22px/1 Georgia, serif; font-variant-numeric:tabular-nums; text-align:center; }
 .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.roll { color:var(--muted); font-size:12px; }
+.roll { display:block; color:var(--muted); font-size:12px; }
 input.mod { width:56px; padding:4px 6px; }
 .x { padding:0 6px; border:0; background:none; color:var(--muted); font-size:18px; }
 form { display:flex; gap:6px; margin-bottom:8px; }
 form input[type="text"] { flex:1; min-width:0; }
 form input[type="number"] { width:56px; }
 label { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; }
+#showBar { margin-top:10px; font-size:12px; color:var(--muted); }
+
+/* top bar */
+body.mode-bar #bar { display:flex; align-items:center; gap:8px; padding:6px 8px; background:rgba(28,32,48,.94); border-radius:12px; }
+.pill { font:600 14px Georgia, serif; white-space:nowrap; }
+#cards { display:flex; flex:1; gap:6px; overflow-x:auto; justify-content:safe center; }
+.card { position:relative; flex:none; width:84px; overflow:hidden; background:var(--surface); border:2px solid transparent; border-radius:8px; text-align:center; }
+.card.active { border-color:var(--accent); box-shadow:0 0 0 2px rgba(124,196,232,.35); }
+.card .portrait { width:100%; height:84px; border-radius:0; }
+.card .letter { font-size:34px; line-height:84px; }
+.card .total { position:absolute; top:4px; left:4px; min-width:26px; padding:1px 6px; background:rgba(16,19,31,.88); border-radius:10px; font:700 14px/1.4 Georgia, serif; }
+.cname { padding:3px 4px; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 body.player .gm-only { display:none; }
 </style>
 </head>
 <body>
-<header>
-  <h1 id="round">Not started</h1>
-  <div class="buttons gm-only">
-    <button id="start">Start</button>
-    <button id="next" class="primary">Next turn</button>
-    <button id="end">End combat</button>
-  </div>
-</header>
-<ol id="list"></ol>
-<form id="add" class="gm-only">
-  <input id="name" type="text" placeholder="Name" required />
-  <input id="mod" type="number" value="0" title="Initiative modifier" />
-  <button>Add</button>
-</form>
-<label class="gm-only"><input type="checkbox" id="reroll" /> Re-roll everyone at the start of each round</label>
+<main id="panel">
+  <header>
+    <h1 id="round">Not started</h1>
+    <div class="buttons gm-only">
+      <button id="start">Start</button>
+      <button id="next" class="primary">Next turn</button>
+      <button id="end">End combat</button>
+    </div>
+  </header>
+  <ol id="list"></ol>
+  <form id="add" class="gm-only">
+    <input id="name" type="text" placeholder="Name" required />
+    <input id="mod" type="number" value="0" title="Initiative modifier" />
+    <button>Add</button>
+  </form>
+  <label class="gm-only"><input type="checkbox" id="reroll" /> Re-roll everyone at the start of each round</label>
+  <button id="showBar" type="button">Show tracker bar</button>
+</main>
+
+<div id="bar">
+  <span id="barRound" class="pill"></span>
+  <div id="cards"></div>
+  <button id="barNext" class="primary gm-only">Next</button>
+  <button id="hideBar" class="x" aria-label="Hide tracker bar">×</button>
+</div>
 
 <script type="module">
 import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3.1.0/+esm";
 
 const ID = "com.example.random-initiative";
 const KEY = `${ID}/state`;
+const BAR_ID = `${ID}/bar`;
+const BAR_TOP = 70; // how far the top bar sits below the top of the screen (px)
 // round 0 = combat not started. turn = index into combatants.
 const DEFAULT = { combatants: [], round: 0, turn: 0, rerollEachRound: true };
 
@@ -74,9 +110,12 @@ function withOrder(state, combatants) {
   const i = sorted.findIndex((c) => c.id === activeId);
   return { ...state, combatants: sorted, turn: i < 0 ? 0 : i };
 }
-function addCombatant(state, { name, mod = 0, tokenId = null }) {
-  if (tokenId && state.combatants.some((c) => c.tokenId === tokenId)) return state;
-  return withOrder(state, [...state.combatants, rollOne({ id: crypto.randomUUID(), name, mod, tokenId })]);
+function addCombatant(state, { name, mod = 0, tokenId = null, img = null }) {
+  if (tokenId && state.combatants.some((c) => c.tokenId === tokenId)) {
+    // already in the list: just refresh its name and picture
+    return { ...state, combatants: state.combatants.map((c) => (c.tokenId === tokenId ? { ...c, name, img: img ?? c.img } : c)) };
+  }
+  return withOrder(state, [...state.combatants, rollOne({ id: crypto.randomUUID(), name, mod, tokenId, img })]);
 }
 const setMod = (state, id, mod) => withOrder(state, state.combatants.map((c) => (c.id === id ? { ...c, mod } : c)));
 function removeCombatant(state, id) {
@@ -99,7 +138,42 @@ function nextTurn(state) {
 }
 const endCombat = (state) => ({ ...DEFAULT, rerollEachRound: state.rerollEachRound });
 
-// ---- background page: right-click menu on tokens ----
+// ---- zoom the screen to a token ----
+async function focusToken(tokenId) {
+  if (!tokenId) return;
+  try {
+    const b = await OBR.scene.items.getItemBounds([tokenId]);
+    const size = Math.max(b.width, b.height, 1) * 6;
+    const half = size / 2;
+    await OBR.viewport.animateToBounds({
+      min: { x: b.center.x - half, y: b.center.y - half },
+      max: { x: b.center.x + half, y: b.center.y + half },
+      width: size, height: size, center: b.center,
+    });
+    await OBR.player.select([tokenId]);
+  } catch (err) {
+    console.warn("Could not focus token", err); // e.g. the token was deleted
+  }
+}
+
+// ---- the bar at the top of the screen ----
+async function openBar() {
+  const vw = await OBR.viewport.getWidth();
+  await OBR.popover.open({
+    id: BAR_ID,
+    url: "/index.html?bar=1",
+    width: Math.min(vw - 200, 600),
+    height: 140,
+    anchorReference: "POSITION",
+    anchorPosition: { left: vw / 2, top: BAR_TOP },
+    transformOrigin: { horizontal: "CENTER", vertical: "TOP" },
+    hidePaper: true,
+    disableClickAway: true,
+    marginThreshold: 0,
+  });
+}
+
+// ---- background page: right-click menu + opens/closes the bar ----
 function startBackground() {
   OBR.onReady(() => {
     OBR.contextMenu.create({
@@ -107,38 +181,100 @@ function startBackground() {
       icons: [{ icon: "/add.svg", label: "Add to Initiative", filter: { every: [{ key: "layer", value: "CHARACTER" }], roles: ["GM"] } }],
       async onClick(context) {
         let state = await loadState();
-        for (const item of context.items) state = addCombatant(state, { name: item.name || "Token", tokenId: item.id });
+        for (const item of context.items) {
+          state = addCombatant(state, { name: item.name || "Token", tokenId: item.id, img: item.image?.url ?? null });
+        }
         await saveState(state);
       },
     });
+
+    let barShown = false;
+    const sync = (s) => {
+      const active = s.round > 0;
+      if (active && !barShown) { barShown = true; openBar(); }
+      if (!active && barShown) { barShown = false; OBR.popover.close(BAR_ID); }
+    };
+    const check = async () => {
+      if (await OBR.scene.isReady()) sync(await loadState());
+      else sync(DEFAULT);
+    };
+    OBR.scene.onReadyChange(check);
+    OBR.scene.onMetadataChange((m) => sync(read(m)));
+    check();
   });
 }
 
-// ---- popover page: the tracker panel ----
-function startPanel() {
+// ---- the panel and the top bar share the same code ----
+function startUI(mode) {
+  document.body.classList.add(`mode-${mode}`);
   let state = DEFAULT;
   let isGM = false;
+  let visible = null; // players only: ids of tokens they can actually see
+
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 
-  async function commit(next) { state = next; render(); await saveState(next); }
+  // players don't get to see who is hiding behind a hidden token
+  const hiddenFor = (c) => visible && c.tokenId && !visible.has(c.tokenId);
+  const nameOf = (c) => (hiddenFor(c) ? "Unknown" : esc(c.name));
+
+  function portrait(c) {
+    const hide = hiddenFor(c);
+    const inner = !hide && c.img
+      ? `<img src="${esc(c.img)}" alt="" />`
+      : `<span class="letter">${hide ? "?" : esc(Array.from((c.name || "?").trim())[0] ?? "?")}</span>`;
+    const canFocus = c.tokenId && !hide;
+    return `<button class="portrait" ${canFocus ? `data-focus="${esc(c.tokenId)}"` : "disabled"} aria-label="Go to ${nameOf(c)}">${inner}</button>`;
+  }
+
+  async function refreshVisible() {
+    if (isGM) { visible = null; return; }
+    const ids = state.combatants.map((c) => c.tokenId).filter(Boolean);
+    const items = ids.length ? await OBR.scene.items.getItems(ids) : [];
+    visible = new Set(items.filter((i) => i.visible).map((i) => i.id));
+  }
+
+  async function fitBar() {
+    const vw = await OBR.viewport.getWidth();
+    OBR.popover.setWidth(BAR_ID, Math.max(260, Math.min(vw - 200, state.combatants.length * 90 + 230)));
+  }
 
   function render() {
     document.body.classList.toggle("player", !isGM);
-    $("round").textContent = state.round ? `Round ${state.round}` : "Not started";
+    const label = state.round ? `Round ${state.round}` : "Not started";
+
+    if (mode === "bar") {
+      $("barRound").textContent = label;
+      $("cards").innerHTML = state.combatants.map((c, i) => `
+        <div class="card ${i === state.turn ? "active" : ""}">
+          ${portrait(c)}
+          <span class="total">${c.roll + c.mod}</span>
+          <div class="cname">${nameOf(c)}</div>
+        </div>`).join("");
+      fitBar();
+      return;
+    }
+
+    $("round").textContent = label;
     $("reroll").checked = state.rerollEachRound;
     $("list").innerHTML = state.combatants.length
       ? state.combatants.map((c, i) => `
         <li class="${state.round && i === state.turn ? "active" : ""}">
+          ${portrait(c)}
           <span class="total">${c.roll + c.mod}</span>
-          <span class="name">${esc(c.name)}</span>
-          <span class="roll">d20: ${c.roll}</span>
-          <input class="mod" type="number" value="${c.mod}" data-mod="${c.id}" aria-label="Modifier for ${esc(c.name)}" ${isGM ? "" : "disabled"} />
-          ${isGM ? `<button class="x" data-remove="${c.id}" aria-label="Remove ${esc(c.name)}">×</button>` : ""}
+          <span class="name">${nameOf(c)}<span class="roll">d20: ${c.roll}</span></span>
+          <input class="mod" type="number" value="${c.mod}" data-mod="${esc(c.id)}" aria-label="Modifier for ${nameOf(c)}" ${isGM ? "" : "disabled"} />
+          ${isGM ? `<button class="x" data-remove="${esc(c.id)}" aria-label="Remove ${nameOf(c)}">×</button>` : ""}
         </li>`).join("")
       : `<li class="empty">${isGM ? "Right-click a token and choose “Add to Initiative”, or add one below." : "No combatants yet."}</li>`;
   }
 
+  async function commit(next) { state = next; render(); await saveState(next); }
+
+  document.addEventListener("click", (e) => {
+    const f = e.target.closest("[data-focus]");
+    if (f) focusToken(f.dataset.focus);
+  });
   $("list").addEventListener("click", (e) => { const id = e.target.dataset.remove; if (id) commit(removeCombatant(state, id)); });
   $("list").addEventListener("change", (e) => { const id = e.target.dataset.mod; if (id) commit(setMod(state, id, Number(e.target.value) || 0)); });
   $("add").addEventListener("submit", (e) => {
@@ -150,21 +286,27 @@ function startPanel() {
   });
   $("start").onclick = () => commit(startCombat(state));
   $("next").onclick = () => commit(nextTurn(state));
+  $("barNext").onclick = () => commit(nextTurn(state));
   $("end").onclick = () => commit(endCombat(state));
   $("reroll").onchange = (e) => commit({ ...state, rerollEachRound: e.target.checked });
+  $("showBar").onclick = () => openBar();
+  $("hideBar").onclick = () => OBR.popover.close(BAR_ID);
 
   OBR.onReady(async () => {
     isGM = (await OBR.player.getRole()) === "GM";
-    const sync = async () => { if (await OBR.scene.isReady()) { state = await loadState(); render(); } };
+    const apply = async (s) => { state = s; await refreshVisible(); render(); };
+    const sync = async () => { if (await OBR.scene.isReady()) await apply(await loadState()); };
     OBR.scene.onReadyChange(sync);
-    OBR.scene.onMetadataChange((m) => { state = read(m); render(); });
+    OBR.scene.onMetadataChange((m) => apply(read(m)));
+    if (!isGM) OBR.scene.items.onChange(async () => { await refreshVisible(); render(); });
     await sync();
     render();
   });
 }
 
-if (new URLSearchParams(location.search).has("bg")) startBackground();
-else startPanel();
+const params = new URLSearchParams(location.search);
+if (params.has("bg")) startBackground();
+else startUI(params.has("bar") ? "bar" : "panel");
 </script>
 </body>
 </html>
