@@ -1,0 +1,15 @@
+{
+  "name": "Random Initiative",
+  "version": "1.0.0",
+  "manifest_version": 1,
+  "description": "Initiative tracker that re-rolls everyone's initiative every round.",
+  "icon": "/icon.svg",
+  "action": {
+    "title": "Initiative",
+    "icon": "/icon.svg",
+    "popover": "/index.html",
+    "width": 360,
+    "height": 520
+  },
+  "background_url": "/index.html?bg=1"
+}
